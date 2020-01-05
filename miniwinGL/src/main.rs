@@ -7,27 +7,23 @@ mod gl;
 mod gl_util;
 
 use gl::CVoid;
-use winapi::um::winuser::PeekMessageA;
-use winapi::um::winuser::PM_REMOVE; 
-use winapi::um::wingdi::SwapBuffers;
-use winapi::um::wingdi::wglMakeCurrent;
-use winapi::um::wingdi::wglCreateContext;
-use winapi::shared::windef::HGLRC;
-use winapi::um::wingdi::SetPixelFormat;
-use winapi::um::winuser::MessageBoxA;
-use winapi::um::winuser::MB_ICONERROR;
+use core::mem::MaybeUninit;
+use core::mem::size_of;
+use core::panic::PanicInfo;
+    
 use winapi::um::wingdi::{
+    ChoosePixelFormat,
+    SwapBuffers,
+    wglMakeCurrent,
+    wglCreateContext,
+    SetPixelFormat,
+
     PFD_TYPE_RGBA,
     PFD_DOUBLEBUFFER,
     PFD_SUPPORT_OPENGL,
     PFD_DRAW_TO_WINDOW,
     PIXELFORMATDESCRIPTOR
 };
-
-use winapi::um::wingdi::ChoosePixelFormat;
-use core::mem::MaybeUninit;
-use core::mem::size_of;
-use core::panic::PanicInfo;
 
 use winapi::shared::minwindef::{
     LRESULT,
@@ -39,6 +35,7 @@ use winapi::shared::minwindef::{
 
 use winapi::shared::windef::{
     HDC,
+    HGLRC,
     HWND,
     HMENU,
     HICON,
@@ -55,15 +52,17 @@ use winapi::um::winuser::{
     PostQuitMessage,
     RegisterClassA,
     TranslateMessage,
-};
+    PeekMessageA,
+    MessageBoxA,
 
-use self::winapi::um::winuser::{
+    MB_ICONERROR,
     MSG,
     WNDCLASSA,
     CS_OWNDC,
     CS_HREDRAW,
     CS_VREDRAW,
     CW_USEDEFAULT,
+    PM_REMOVE, 
     WS_OVERLAPPEDWINDOW,
     WS_VISIBLE,
 };
@@ -80,13 +79,7 @@ pub unsafe extern "system" fn window_proc(hwnd: HWND,
     return 0;
 }
 
-fn show_error( message : &str ) {
-    unsafe{
-        MessageBoxA(0 as HWND, message.as_ptr() as *const i8, "Error\0".as_ptr() as *const i8, MB_ICONERROR);
-    }
-}
-
-fn show_error2( message : *const i8 ) {
+fn show_error( message : *const i8 ) {
     unsafe{
         MessageBoxA(0 as HWND, message, "Window::create\0".as_ptr() as *const i8, MB_ICONERROR);
     }
@@ -137,23 +130,23 @@ fn create_window( ) -> ( HWND, HDC ) {
          
         let pf_id : i32 = ChoosePixelFormat(h_dc, &pfd );
         if pf_id == 0 {
-            show_error( "ChoosePixelFormat() failed.\0");
+            show_error( "ChoosePixelFormat() failed.\0".as_ptr() as *const i8);
             return ( 0 as HWND, h_dc ) ;
         }
 
         if SetPixelFormat(h_dc, pf_id, &pfd) == 0  {
-            show_error( "SetPixelFormat() failed.\0");
+            show_error( "SetPixelFormat() failed.\0".as_ptr() as *const i8);
             return ( 0 as HWND, h_dc ) ;
         }
 
         let gl_context : HGLRC = wglCreateContext(h_dc);    // Rendering Contex
         if gl_context == 0 as HGLRC {
-            show_error2( "wglCreateContext() failed.\0".as_ptr() as *const i8 );
+            show_error( "wglCreateContext() failed.\0".as_ptr() as *const i8 );
             return ( 0 as HWND, h_dc ) ;
         }
          
         if wglMakeCurrent(h_dc, gl_context) == 0 {
-            show_error( "wglMakeCurrent() failed.\0");
+            show_error( "wglMakeCurrent() failed.\0".as_ptr() as *const i8);
             return ( 0 as HWND, h_dc ) ;
         }
 
@@ -232,17 +225,17 @@ pub extern "system" fn mainCRTStartup() {
    
     let vtx_shader = match gl_util::shader_from_source( vtx_shader_src, gl::VERTEX_SHADER, &mut error_message ) {
         Some( shader ) => shader,
-        None => { show_error2( error_message.as_ptr()  ); 0 }
+        None => { show_error( error_message.as_ptr()  ); 0 }
     };
 
     let frag_shader  = match gl_util::shader_from_source( frag_shader_src, gl::FRAGMENT_SHADER,  &mut error_message ) {
         Some( shader ) => shader,
-        None => { show_error2( error_message.as_ptr() ); 0 }
+        None => { show_error( error_message.as_ptr() ); 0 }
     };
 
     let shader_prog = match gl_util::program_from_shaders(vtx_shader, frag_shader, &mut error_message ) {
         Some( prog ) => prog,
-        None => { show_error2( error_message.as_ptr() ); 0 }
+        None => { show_error( error_message.as_ptr() ); 0 }
     };
 
     let mut vertex_buffer_id : gl::GLuint = 0;
@@ -279,11 +272,7 @@ pub extern "system" fn mainCRTStartup() {
 
             gl::UseProgram(shader_prog);
             gl::BindVertexArray(vertex_array_id);
-            gl::DrawArrays(
-                    gl::TRIANGLES, // mode
-                    0, // starting index in the enabled arrays
-                    3 // number of indices to be rendered
-                );
+            gl::DrawArrays( gl::TRIANGLES, 0, 3 );
             SwapBuffers(hdc);
         }
     }
@@ -293,5 +282,6 @@ pub extern "system" fn mainCRTStartup() {
     }
 }
 
+// Compiling with no_std seems to require the following symbol to be set if there is any floating point code anywhere in the code
 #[no_mangle]
 pub static _fltused : i32 = 1;
