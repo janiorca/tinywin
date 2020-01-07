@@ -17,9 +17,10 @@ pub type GLint = i32;
 pub type GLuint = u32;
 pub type GLsizei = i32;
 pub type GLsizeiptr = isize;
-
+ 
 pub const FALSE: GLboolean = 0;
 pub const TRIANGLES: GLenum = 0x0004;
+pub const TRIANGLE_STRIP: GLenum = 0x0005;
 pub const FLOAT: GLenum = 0x1406;
 pub const COLOR: GLenum = 0x1800;
 pub const FRAGMENT_SHADER: GLenum = 0x8B30;
@@ -46,8 +47,10 @@ const GetProgramInfoLogIdx: u16 = 254;
 const GetProgramivIdx: u16 = 256;
 const GetShaderInfoLogIdx: u16 = 280;
 const GetShaderivIdx: u16 = 281;
+const GetUniformLocationIdx: u16 = 313;
 const LinkProgramIdx: u16 = 350;
 const ShaderSourceIdx: u16 = 479;
+const Uniform1fIdx: u16 = 539;
 const UseProgramIdx: u16 = 591;
 const VertexAttribPointerIdx: u16 = 682;
 
@@ -80,6 +83,8 @@ static LOAD_DESC: &'static [(u16, &'static str)] = &[
     (EnableVertexAttribArrayIdx, "glEnableVertexAttribArray\0"),
     (VertexAttribPointerIdx, "glVertexAttribPointer\0"),
 
+    (GetUniformLocationIdx, "glGetUniformLocation\0"),
+    (Uniform1fIdx, "glUniform1f\0"),
   
     // (CreateProgramIdx, b"glCreateProgram\0"),
     // (ClearBufferfvIdx, b"glClearBufferfv\0"),
@@ -169,6 +174,14 @@ pub unsafe fn VertexAttribPointer(index: GLuint, size: GLint, type_: GLenum, nor
 
 pub unsafe fn DrawArrays(mode: GLenum, first: GLint, count: GLsizei) -> () {
     mem::transmute::<_, extern "system" fn(GLenum, GLint, GLsizei) -> ()>(*GL_API.get_unchecked(DrawArraysIdx as usize))(mode, first, count)
+}
+
+pub unsafe fn GetUniformLocation(program: GLuint, name: *const GLchar) -> GLint {
+    mem::transmute::<_, extern "system" fn(GLuint, *const GLchar) -> GLint>(*GL_API.get_unchecked(GetUniformLocationIdx as usize))(program, name)
+}
+
+pub unsafe fn Uniform1f(location: GLint, v0: GLfloat) -> () {
+    mem::transmute::<_, extern "system" fn(GLint, GLfloat) -> ()>(*GL_API.get_unchecked(Uniform1fIdx as usize))(location, v0)
 }
 
 pub fn init() {

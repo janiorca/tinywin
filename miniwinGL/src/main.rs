@@ -211,16 +211,33 @@ pub extern "system" fn mainCRTStartup() {
     }\0";
 
     let frag_shader_src : &'static str = "#version 330 core
+    #define num_circles 4
+    in vec4 gl_FragCoord;
     out vec4 Color;
+    uniform float iTime;
     void main()
     {
-     Color = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-    }\0";
+        vec2 uv = gl_FragCoord.xy/800.0;
+        vec2 sc = vec2( 0.5, 0.5 ); 
+        vec4 fragColor = vec4( 0.0, 0.0, 0.0, 0.0 );
+        Color = vec4( 0.0, 0.0, 0.0, 0.0 );
+        for( int idx=0; idx<num_circles; idx++ ) 
+        {
+            vec2 center = vec2(sin( iTime*(float(idx)*0.132+0.1672 ) )*(0.146+0.0132*float(idx)),
+                                    sin( iTime+ iTime*(float(idx)*0.1822+0.221))*(0.1131+0.0112*float(idx)) ) + sc;
 
-    let vtx_coords : [ [ gl::GLfloat; 3 ]; 3 ] = [
+            float dist = distance( center, uv );
+            vec3 col = vec3( sin( 100.0*dist ), sin( 110.0*dist ), sin( 120.0*dist ) );
+            col *= max( 0.0, (1.0-dist*3.0) );
+            Color += vec4( col, 0.0 );
+        }    
+    }\0\0";
+
+    let vtx_coords : [ [ gl::GLfloat; 3 ]; 4 ] = [
         [ -1.0, -1.0, 0.0 ],
         [ 1.0, -1.0, 0.0 ],
-        [ 0.0,  1.0, 0.0 ],
+        [ -1.0,  1.0, 0.0 ],
+        [ 1.0,  1.0, 0.0 ],
      ];
    
     let vtx_shader = match gl_util::shader_from_source( vtx_shader_src, gl::VERTEX_SHADER, &mut error_message ) {
@@ -248,7 +265,7 @@ pub extern "system" fn mainCRTStartup() {
         gl::BindVertexArray(vertex_array_id);
   
         gl::BindBuffer(gl::ARRAY_BUFFER, vertex_buffer_id);
-        gl::BufferData( gl::ARRAY_BUFFER, size_of::<gl::GLfloat>() as isize * 9, vtx_coords.as_ptr() as *const gl::CVoid, gl::STATIC_DRAW);
+        gl::BufferData( gl::ARRAY_BUFFER, size_of::<gl::GLfloat>() as isize * 3 * 4, vtx_coords.as_ptr() as *const gl::CVoid, gl::STATIC_DRAW);
 
         gl::EnableVertexAttribArray(0); // this is "layout (location = 0)" in vertex shader
         gl::VertexAttribPointer(
@@ -262,18 +279,24 @@ pub extern "system" fn mainCRTStartup() {
         );    
     }
 
+    let mut iTime : f32 = 0.0;
     loop {
         if !handle_message( window ) {
             break;
         }
         unsafe{
-            let rgba = &[ 0.4f32, 1.0, 0.0, 0.0 ];
+            let rgba = &[ 0.4f32, 1.0, 0.9, 0.0 ];
             gl::ClearBufferfv(gl::COLOR, 0, rgba as *const _ );  
 
             gl::UseProgram(shader_prog);
+  
+           let vertexColorLocation : i32 = gl::GetUniformLocation(shader_prog, "iTime\0".as_ptr());
+           gl::Uniform1f(vertexColorLocation, iTime );
+  
             gl::BindVertexArray(vertex_array_id);
-            gl::DrawArrays( gl::TRIANGLES, 0, 3 );
+            gl::DrawArrays( gl::TRIANGLE_STRIP, 0, 4 );
             SwapBuffers(hdc);
+            iTime += 0.001f32;            
         }
     }
     unsafe{
