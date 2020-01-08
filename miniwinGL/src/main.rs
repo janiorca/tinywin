@@ -149,8 +149,8 @@ fn create_window( ) -> ( HWND, HDC ) {
             show_error( "wglMakeCurrent() failed.\0".as_ptr() as *const i8);
             return ( 0 as HWND, h_dc ) ;
         }
-
         gl::init();
+        gl::wglSwapIntervalEXT(1);
         ( h_wnd, h_dc )
     }
 }
@@ -279,7 +279,7 @@ pub extern "system" fn mainCRTStartup() {
         );    
     }
 
-    let mut iTime : f32 = 0.0;
+    let mut time : f32 = 0.0;
     loop {
         if !handle_message( window ) {
             break;
@@ -290,13 +290,13 @@ pub extern "system" fn mainCRTStartup() {
 
             gl::UseProgram(shader_prog);
   
-           let vertexColorLocation : i32 = gl::GetUniformLocation(shader_prog, "iTime\0".as_ptr());
-           gl::Uniform1f(vertexColorLocation, iTime );
+           let vertex_color_loc : i32 = gl::GetUniformLocation(shader_prog, "iTime\0".as_ptr());
+           gl::Uniform1f(vertex_color_loc, time );
   
             gl::BindVertexArray(vertex_array_id);
             gl::DrawArrays( gl::TRIANGLE_STRIP, 0, 4 );
             SwapBuffers(hdc);
-            iTime += 0.001f32;            
+            time += 1.0 / 60.0f32;            
         }
     }
     unsafe{

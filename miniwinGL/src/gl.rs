@@ -54,8 +54,11 @@ const Uniform1fIdx: u16 = 539;
 const UseProgramIdx: u16 = 591;
 const VertexAttribPointerIdx: u16 = 682;
 
+const wglSwapIntervalIdx: u16 = 695;
+
 static LOAD_DESC: &'static [(u16, &'static str)] = &[
 
+    ( wglSwapIntervalIdx, "wglSwapIntervalEXT\0" ),
     (DrawArraysIdx, "glDrawArrays\0"),
 
     // Program functions
@@ -86,11 +89,17 @@ static LOAD_DESC: &'static [(u16, &'static str)] = &[
     (GetUniformLocationIdx, "glGetUniformLocation\0"),
     (Uniform1fIdx, "glUniform1f\0"),
   
+//    ( wglSwapIntervalIdx, "wglSwapIntervalEXT\0" ),
     // (CreateProgramIdx, b"glCreateProgram\0"),
     // (ClearBufferfvIdx, b"glClearBufferfv\0"),
 ];
 
-static mut GL_API: [usize; 695] = [0; 695];
+static mut GL_API: [usize; 696] = [0; 696];
+
+pub unsafe fn wglSwapIntervalEXT(interval: GLint ) -> GLuint {
+    mem::transmute::<_, extern "system" fn(GLint) -> GLuint>(*GL_API.get_unchecked(wglSwapIntervalIdx as usize))(interval)
+}
+
 
 pub unsafe fn CreateProgram() -> GLuint {
     mem::transmute::<_, extern "system" fn() -> GLuint>(*GL_API.get_unchecked(CreateProgramIdx as usize))()
