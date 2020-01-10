@@ -260,23 +260,15 @@ pub extern "system" fn mainCRTStartup() {
     unsafe{
         // Generate 1 buffer, put the resulting identifier in vertexbuffer
         gl::GenBuffers(1, &mut vertex_buffer_id);
-  
+        // one vertex array to hold the vertex and its attributes
         gl::GenVertexArrays(1, &mut vertex_array_id );
         gl::BindVertexArray(vertex_array_id);
-  
+        // bind the buffer and load the vertices
         gl::BindBuffer(gl::ARRAY_BUFFER, vertex_buffer_id);
         gl::BufferData( gl::ARRAY_BUFFER, size_of::<gl::GLfloat>() as isize * 3 * 4, vtx_coords.as_ptr() as *const gl::CVoid, gl::STATIC_DRAW);
-
+        // enable and define vertex attributes 
         gl::EnableVertexAttribArray(0); // this is "layout (location = 0)" in vertex shader
-        gl::VertexAttribPointer(
-            0, // index of the generic vertex attribute ("layout (location = 0)")
-            3, // the number of components per generic vertex attribute
-
-            gl::FLOAT, // data type
-            gl::FALSE, // normalized (int-to-float conversion)
-            (3 * core::mem::size_of::<f32>()) as gl::GLint, // stride (byte offset between consecutive attributes)
-            0 as *const CVoid // offset of the first component
-        );    
+        gl::VertexAttribPointer( 0,  3, gl::FLOAT, gl::FALSE, 3 * size_of::<gl::GLfloat>() as gl::GLint, 0 as *const CVoid );    
     }
 
     let mut time : f32 = 0.0;
@@ -290,8 +282,8 @@ pub extern "system" fn mainCRTStartup() {
 
             gl::UseProgram(shader_prog);
   
-           let vertex_color_loc : i32 = gl::GetUniformLocation(shader_prog, "iTime\0".as_ptr());
-           gl::Uniform1f(vertex_color_loc, time );
+           let time_loc : i32 = gl::GetUniformLocation(shader_prog, "iTime\0".as_ptr());
+           gl::Uniform1f(time_loc, time );
   
             gl::BindVertexArray(vertex_array_id);
             gl::DrawArrays( gl::TRIANGLE_STRIP, 0, 4 );
